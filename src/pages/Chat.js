@@ -338,7 +338,8 @@ export default function Chat() {
     setMsg("");
     setLoading(true);
     try {
-      const res = await axios.post("http://127.0.0.1:8000/api/chat/", { message: userMessage });
+      // const res = await axios.post("http://127.0.0.1:8000/api/chat/", { message: userMessage });
+      const res = await axios.post("https://ai-code-mentor-backend-0rmn.onrender.com/api/chat/", { message: userMessage });
       updateMessages(activeId, msgs => {
         const updated = [...msgs];
         updated[updated.length - 1] = { ...updated[updated.length - 1], bot: res.data.reply };
