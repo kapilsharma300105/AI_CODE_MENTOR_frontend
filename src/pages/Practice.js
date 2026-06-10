@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+// import axios from "axios";
+import API from "../api";
 import Editor from "@monaco-editor/react";
 
 const TOPIC_COLORS = {
@@ -33,7 +34,8 @@ export default function Practice() {
   const [solved,    setSolved]      = useState(new Set());
 
   useEffect(() => {
-    axios.get("http://127.0.0.1:8000/api/practice/")
+    API.get("practice/")
+
       .then(res => {
         setQuestions(res.data.questions);
         pick(res.data.questions[0]);
@@ -59,7 +61,7 @@ export default function Practice() {
     if (!code.trim()) return;
     setLoading(true); setRunType("run"); setTab("output"); setResult(null);
     try {
-      const res = await axios.post("http://127.0.0.1:8000/api/test/", { code });
+      const res = await API.post("test/", { code });
       setResult({ type: "run", output: res.data.result });
     } catch {
       setResult({ type: "error", output: "Server error. Check backend." });
@@ -74,7 +76,8 @@ export default function Practice() {
   setResult(null);
 
   try {
-    const res = await axios.post("http://127.0.0.1:8000/api/evaluate/", {
+    const res = await API.post("evaluate/", {
+
       question: selected.title,
       answer: code,
     });
