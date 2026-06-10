@@ -289,6 +289,7 @@ import Sidebar from "../components/Sidebar";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import API from "../api";
 
 const STORAGE_KEY = "ai_mentor_sessions";
 
@@ -339,7 +340,8 @@ export default function Chat() {
     setLoading(true);
     try {
       // const res = await axios.post("http://127.0.0.1:8000/api/chat/", { message: userMessage });
-      const res = await axios.post("https://ai-code-mentor-backend-0rmn.onrender.com/api/chat/", { message: userMessage });
+      // const res = await axios.post("https://ai-code-mentor-backend-0rmn.onrender.com/api/chat/", { message: userMessage });
+     const res = await API.post("chat/", { message: userMessage });
       updateMessages(activeId, msgs => {
         const updated = [...msgs];
         updated[updated.length - 1] = { ...updated[updated.length - 1], bot: res.data.reply };
