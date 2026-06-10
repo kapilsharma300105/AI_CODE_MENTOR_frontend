@@ -4,7 +4,7 @@ import axios from "axios";
 // BASE API (BACKEND URL)
 // ============================
 const API = axios.create({
-  baseURL: "https://ai-code-mentor-backend-0rmn.onrender.com/api/",
+  baseURL: "https://ai-code-mentor-backend-0rmn.onrender.com/",
 });
 
 // ============================
