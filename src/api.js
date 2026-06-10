@@ -1,156 +1,84 @@
 import axios from "axios";
 
 // ============================
-// AXIOS INSTANCE
+// BASE API (BACKEND URL)
 // ============================
 const API = axios.create({
-  baseURL: "http://127.0.0.1:8000/api/",
+  baseURL: "https://ai-code-mentor-backend-0rmn.onrender.com/",
 });
 
 // ============================
-// 🔥 AUTO JWT TOKEN ATTACH
+// JWT INTERCEPTOR
 // ============================
 API.interceptors.request.use(
-
   (config) => {
-
-    // 🔥 GET TOKEN
     const token = localStorage.getItem("token");
 
-    console.log("🔥 TOKEN SENT:", token);
-
-    // 🔥 IF TOKEN EXISTS
     if (token && token !== "undefined" && token !== "null") {
-
       config.headers = {
         ...config.headers,
-
         Authorization: `Bearer ${token}`,
       };
     }
 
     return config;
   },
-
   (error) => Promise.reject(error)
 );
 
 // ============================
 // PROFILE
 // ============================
-export const getProfileAPI = async () => {
-  const res = await API.get("profile/");
-  return res.data;
-};
+export const getProfileAPI = () => API.get("/profile/").then(res => res.data);
 
-export const updateProfileAPI = async (data) => {
-
-  const res = await API.post(
-    "profile/update/",
-    data,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    }
-  );
-
-  return res.data;
-};
+export const updateProfileAPI = (data) =>
+  API.post("/profile/update/", data, {
+    headers: { "Content-Type": "multipart/form-data" },
+  }).then(res => res.data);
 
 // ============================
 // USER
 // ============================
-export const getUserAPI = async () => {
-  const res = await API.get("user/");
-  return res.data;
-};
+export const getUserAPI = () => API.get("/user/").then(res => res.data);
 
 // ============================
 // CODE RUNNER
 // ============================
-export const runCodeAPI = async (code, language) => {
-
-  const res = await API.post("run/", {
-    code,
-    language,
-  });
-
-  return res.data;
-};
+export const runCodeAPI = (code, language) =>
+  API.post("/run/", { code, language }).then(res => res.data);
 
 // ============================
 // ANALYZE
 // ============================
-export const analyzeCodeAPI = async (
-  code,
-  language
-) => {
-
-  const res = await API.post("analyze/", {
-    code,
-    language,
-  });
-
-  return res.data;
-};
+export const analyzeCodeAPI = (code, language) =>
+  API.post("/analyze/", { code, language }).then(res => res.data);
 
 // ============================
 // CHAT
 // ============================
-export const aiChatAPI = async (message) => {
-
-  const res = await API.post("chat/", {
-    message,
-  });
-
-  return res.data;
-};
+export const aiChatAPI = (message) =>
+  API.post("/chat/", { message }).then(res => res.data);
 
 // ============================
 // HISTORY
 // ============================
-export const getHistoryAPI = async () => {
-
-  const res = await API.get("history/");
-  return res.data;
-};
+export const getHistoryAPI = () => API.get("/history/").then(res => res.data);
 
 // ============================
 // PRACTICE
 // ============================
-export const getPracticeAPI = async () => {
-
-  const res = await API.get("practice/");
-  return res.data;
-};
+export const getPracticeAPI = () => API.get("/practice/").then(res => res.data);
 
 // ============================
 // TEST
 // ============================
-export const testModeAPI = async (code) => {
-
-  const res = await API.post("test/", {
-    code,
-  });
-
-  return res.data;
-};
+export const testModeAPI = (code) =>
+  API.post("/test/", { code }).then(res => res.data);
 
 // ============================
 // EVALUATE
 // ============================
-export const evaluateAPI = async (
-  code,
-  expected_output
-) => {
-
-  const res = await API.post("evaluate/", {
-    code,
-    expected_output,
-  });
-
-  return res.data;
-};
+export const evaluateAPI = (code, expected_output) =>
+  API.post("/evaluate/", { code, expected_output }).then(res => res.data);
 
 export default API;
