@@ -6,7 +6,8 @@ import { useNavigate } from "react-router-dom";
 const buildAvatarUrl = (url) => {
   if (!url) return null;
   if (url.startsWith("http")) return url;
-  return "http://127.0.0.1:8000" + url;
+  // ✅ Local nahi, Render backend use karo
+  return "https://ai-code-mentor-backend-0rmn.onrender.com" + url;
 };
 
 export default function Profile() {
