@@ -20,27 +20,27 @@ function Dashboard() {
   const level = Math.floor(xp / 100);
   const progress = xp % 100;
 
-  useEffect(() => {
+  
+      useEffect(() => {
+  // Google OAuth token capture
+  const params = new URLSearchParams(window.location.search);
+  const access = params.get("access");
+  const refresh = params.get("refresh");
 
-    const cached = JSON.parse(localStorage.getItem("user"));
-    if (cached) {
-      setUser({ ...cached, avatar: buildAvatarUrl(cached.avatar) });
-    }
+  if (access && refresh) {
+    localStorage.setItem("access_token", access);
+    localStorage.setItem("refresh_token", refresh);
+    // URL clean karo — history mein token na dikhe
+    window.history.replaceState({}, document.title, "/dashboard");
+  }
 
-    API.get("profile/")
-      .then((res) => {
-        const fullAvatarUrl = buildAvatarUrl(res.data.avatar);
-        const updated = {
-          username: res.data.username,
-          email: res.data.email,
-          bio: res.data.bio,
-          role: res.data.role || "",
-          avatar: fullAvatarUrl,
-        };
-        setUser(updated);
-        localStorage.setItem("user", JSON.stringify(updated));
-      })
-      .catch(() => {});
+  // Baaki wala purana code same rehne do
+  const cached = JSON.parse(localStorage.getItem("user"));
+  if (cached) {
+    setUser({ ...cached, avatar: buildAvatarUrl(cached.avatar) });
+  }
+  // ... rest of your useEffect
+}, []);
 
     const saved = JSON.parse(localStorage.getItem("codingActivity")) || [];
     setActivity(saved);

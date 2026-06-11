@@ -147,6 +147,7 @@
 
 
 
+
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import API from "../api";
@@ -158,28 +159,21 @@ function Login() {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-    setError("");
-    if (!form.username || !form.password) {
-      setError("Username and password required");
-      return;
-    }
-    try {
-      setLoading(true);
-      const res = await API.post("token/", {
-        username: form.username,
-        password: form.password,
-      });
-      localStorage.setItem("token", res.data.access);
-      localStorage.setItem("refresh", res.data.refresh);
-      localStorage.setItem("user", JSON.stringify({ name: form.username }));
-      window.dispatchEvent(new Event("userLogin"));
-      navigate("/dashboard");
-    } catch (err) {
-      setError(err.response?.data?.detail || "Login failed.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    const res = await API.post("token/", {
+      username: form.username,
+      password: form.password,
+    });
+
+    localStorage.setItem("token", res.data.access);
+    localStorage.setItem("refresh", res.data.refresh);
+
+    navigate("/dashboard");
+
+  } catch (err) {
+    setError("Login failed");
+  }
+};
 
   return (
     <div style={styles.container}>

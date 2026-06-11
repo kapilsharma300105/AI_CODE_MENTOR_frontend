@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
-
+import { Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
@@ -20,7 +20,7 @@ function Layout() {
   const isAuth = localStorage.getItem("token");
   const location = useLocation();
 
-  // 👉 Jaha navbar nahi chahiye
+ 
   const hideNavbarRoutes = ["/run-code", "/test"];
 
   return (
@@ -34,7 +34,10 @@ function Layout() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        <Route path="/dashboard" element={isAuth ? <Dashboard /> : <Login />} />
+        <Route
+  path="/dashboard"
+  element={isAuth ? <Dashboard /> : <Navigate to="/login" />}
+/>
         <Route path="/analyze" element={isAuth ? <Analyzer /> : <Login />} />
         <Route path="/chat" element={isAuth ? <Chat /> : <Login />} />
         <Route path="/history" element={isAuth ? <History /> : <Login />} />
