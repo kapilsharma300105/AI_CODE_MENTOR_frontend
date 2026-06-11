@@ -281,26 +281,21 @@
 
 
 
-
-
 import React, { useState, useRef, useEffect } from "react";
-import axios from "axios";
-import Sidebar from "../components/Sidebar";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import API from "../api";
+import Sidebar from "../components/Sidebar";
 
 const STORAGE_KEY = "ai_mentor_sessions";
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
-
 function createSession(name) {
   return { id: generateId(), name, messages: [], createdAt: Date.now() };
 }
-
 function loadSessions() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -318,7 +313,9 @@ export default function Chat() {
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
+  const [copiedId, setCopiedId] = useState(null);
   const chatEndRef = useRef(null);
+  const textareaRef = useRef(null);
 
   const activeSession = sessions.find(s => s.id === activeId) || sessions[0];
   const chat = activeSession?.messages || [];
@@ -337,11 +334,10 @@ export default function Chat() {
     const userMessage = msg;
     updateMessages(activeId, msgs => [...msgs, { user: userMessage, bot: "loading" }]);
     setMsg("");
+    if (textareaRef.current) textareaRef.current.style.height = "44px";
     setLoading(true);
     try {
-      // const res = await axios.post("http://127.0.0.1:8000/api/chat/", { message: userMessage });
-      // const res = await axios.post("https://ai-code-mentor-backend-0rmn.onrender.com/api/chat/", { message: userMessage });
-     const res = await API.post("chat/", { message: userMessage });
+      const res = await API.post("chat/", { message: userMessage });
       updateMessages(activeId, msgs => {
         const updated = [...msgs];
         updated[updated.length - 1] = { ...updated[updated.length - 1], bot: res.data.reply };
@@ -350,7 +346,7 @@ export default function Chat() {
     } catch {
       updateMessages(activeId, msgs => {
         const updated = [...msgs];
-        updated[updated.length - 1] = { ...updated[updated.length - 1], bot: "Server error. Please try again." };
+        updated[updated.length - 1] = { ...updated[updated.length - 1], bot: "❌ Server error. Please try again." };
         return updated;
       });
     }
@@ -370,154 +366,282 @@ export default function Chat() {
     if (activeId === id) setActiveId(remaining[0].id);
   };
 
-  const clearChat = () => {
-    updateMessages(activeId, () => []);
-  };
-
-  const exportChat = () => {
-    const lines = chat.map(c => "You: " + c.user + "\n\nAI: " + c.bot).join("\n\n---\n\n");
-    const blob = new Blob([lines], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = (activeSession.name || "chat") + ".txt";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const clearChat = () => updateMessages(activeId, () => []);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
-  const theme = darkMode ? darkStyles : lightStyles;
+  const handleInput = (e) => {
+    setMsg(e.target.value);
+    e.target.style.height = "44px";
+    e.target.style.height = Math.min(e.target.scrollHeight, 140) + "px";
+  };
+
+  const copyCode = (text, id) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const d = darkMode;
 
   return (
-    <div style={{ ...baseStyles.app, background: darkMode ? "#020617" : "#f1f5f9", color: darkMode ? "white" : "#0f172a" }}>
+    <div style={{
+      display: "flex", height: "100vh",
+      background: d ? "#0a0f1e" : "#f0f4f8",
+      color: d ? "#e2e8f0" : "#1e293b",
+      fontFamily: "'Inter', -apple-system, sans-serif",
+      transition: "all 0.3s ease"
+    }}>
       <Sidebar />
-      <div style={baseStyles.main}>
 
-        {/* SESSION TABS */}
-        <div style={{ ...theme.tabsBar }}>
-          <div style={baseStyles.tabsScroll}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 16px 0", overflow: "hidden" }}>
+
+        {/* TABS */}
+        <div style={{ width: "min(760px, 100%)", marginBottom: "10px" }}>
+          <div style={{ display: "flex", gap: "6px", overflowX: "auto", alignItems: "center", paddingBottom: "2px" }}>
             {sessions.map(s => (
-              <div
-                key={s.id}
-                style={{ ...theme.tab, ...(s.id === activeId ? theme.activeTab : {}) }}
-                onClick={() => setActiveId(s.id)}
-              >
-                <span style={{ fontSize: "13px" }}>{s.name}</span>
+              <div key={s.id} onClick={() => setActiveId(s.id)} style={{
+                display: "flex", alignItems: "center", gap: "6px",
+                padding: "6px 14px", borderRadius: "10px", cursor: "pointer",
+                whiteSpace: "nowrap", fontSize: "13px", fontWeight: 500,
+                transition: "all 0.2s",
+                background: s.id === activeId
+                  ? (d ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "linear-gradient(135deg,#6366f1,#8b5cf6)")
+                  : (d ? "#131929" : "#e2e8f0"),
+                color: s.id === activeId ? "white" : (d ? "#64748b" : "#64748b"),
+                border: s.id === activeId ? "none" : `1px solid ${d ? "#1e293b" : "#cbd5e1"}`,
+                boxShadow: s.id === activeId ? "0 2px 12px rgba(99,102,241,0.35)" : "none",
+              }}>
+                <span>💬</span>
+                <span>{s.name}</span>
                 {sessions.length > 1 && (
-                  <button
-                    style={theme.closeTab}
-                    onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
-                  >×</button>
+                  <button onClick={e => { e.stopPropagation(); deleteSession(s.id); }} style={{
+                    background: "transparent", border: "none", color: "inherit",
+                    cursor: "pointer", fontSize: "15px", lineHeight: 1, opacity: 0.6,
+                    padding: "0 2px", marginLeft: "2px"
+                  }}>×</button>
                 )}
               </div>
             ))}
-            <button style={theme.newTabBtn} onClick={addSession}>+ New</button>
+            <button onClick={addSession} style={{
+              background: "transparent",
+              border: `1px dashed ${d ? "#334155" : "#94a3b8"}`,
+              color: d ? "#64748b" : "#94a3b8",
+              borderRadius: "10px", padding: "6px 14px",
+              cursor: "pointer", fontSize: "13px", whiteSpace: "nowrap",
+              transition: "all 0.2s"
+            }}>+ New</button>
           </div>
         </div>
 
-        <div style={{ ...theme.container }}>
+        {/* CHAT CONTAINER */}
+        <div style={{
+          width: "min(760px, 100%)", flex: 1, display: "flex", flexDirection: "column",
+          background: d ? "#0f172a" : "white",
+          borderRadius: "20px 20px 0 0",
+          border: `1px solid ${d ? "#1e293b" : "#e2e8f0"}`,
+          borderBottom: "none",
+          boxShadow: d ? "0 0 60px rgba(0,0,0,0.5)" : "0 4px 30px rgba(0,0,0,0.08)",
+          overflow: "hidden"
+        }}>
 
           {/* HEADER */}
-          <div style={theme.header}>
-            <h2 style={{ margin: 0, fontSize: "17px", fontWeight: 500 }}>
-              {activeSession.name}
-            </h2>
-            <div style={baseStyles.headerActions}>
-              <span style={baseStyles.statusDot}>● Online</span>
-              <button style={theme.actionBtn} onClick={() => setDarkMode(d => !d)}>
-                {darkMode ? "☀ Light" : "☾ Dark"}
+          <div style={{
+            padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center",
+            borderBottom: `1px solid ${d ? "#1e293b" : "#f1f5f9"}`,
+            background: d ? "#0f172a" : "white",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{
+                width: "34px", height: "34px", borderRadius: "10px",
+                background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "16px", boxShadow: "0 2px 10px rgba(99,102,241,0.4)"
+              }}>🤖</div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: "14px" }}>{activeSession.name}</div>
+                <div style={{ fontSize: "11px", color: "#22c55e", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e", display: "inline-block" }}></span>
+                  AI Mentor Online
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={() => setDarkMode(d => !d)} style={btnStyle(d)}>
+                {d ? "☀ Light" : "☾ Dark"}
               </button>
-              
-            
-              <button style={theme.actionBtn} onClick={clearChat} disabled={chat.length === 0}>
-                Clear
+              <button onClick={clearChat} disabled={chat.length === 0} style={{ ...btnStyle(d), opacity: chat.length === 0 ? 0.4 : 1 }}>
+                🗑 Clear
               </button>
             </div>
           </div>
 
-          {/* BODY */}
-          <div style={theme.body}>
+          {/* MESSAGES */}
+          <div style={{
+            flex: 1, overflowY: "auto", padding: "24px 20px",
+            display: "flex", flexDirection: "column", gap: "20px",
+            scrollbarWidth: "thin",
+            scrollbarColor: d ? "#1e293b transparent" : "#e2e8f0 transparent"
+          }}>
             {chat.length === 0 && (
-              <p style={{ textAlign: "center", color: darkMode ? "#64748b" : "#94a3b8", marginTop: "60px" }}>
-                Ask coding doubts, errors, logic...
-              </p>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px", opacity: 0.5, marginTop: "60px" }}>
+                <div style={{ fontSize: "48px" }}>💡</div>
+                <div style={{ fontSize: "15px", fontWeight: 500 }}>Ask anything about code</div>
+                <div style={{ fontSize: "13px", color: d ? "#475569" : "#94a3b8" }}>Errors · Logic · Concepts · DSA · Projects</div>
+              </div>
             )}
+
             {chat.map((c, i) => (
-              <div key={i}>
-                <div style={{ ...baseStyles.row, justifyContent: "flex-end" }}>
-                  <div style={{ ...baseStyles.bubble, ...theme.userBubble }}>{c.user}</div>
-                  <div style={{ ...baseStyles.avatar, background: "#3b82f6", color: "white" }}>U</div>
+              <div key={i} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+
+                {/* USER MESSAGE */}
+                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", gap: "8px" }}>
+                  <div style={{
+                    maxWidth: "70%", padding: "12px 16px",
+                    background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                    borderRadius: "18px 18px 4px 18px",
+                    fontSize: "14px", lineHeight: "1.6", color: "white",
+                    boxShadow: "0 2px 12px rgba(99,102,241,0.3)"
+                  }}>{c.user}</div>
+                  <div style={{
+                    width: "30px", height: "30px", borderRadius: "50%", flexShrink: 0,
+                    background: "linear-gradient(135deg,#3b82f6,#6366f1)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "11px", fontWeight: 700, color: "white"
+                  }}>U</div>
                 </div>
-                <div style={{ ...baseStyles.row, justifyContent: "flex-start" }}>
-                  <div style={{ ...baseStyles.avatar, background: "#22c55e", color: "#052e16" }}>AI</div>
-                  <div style={{ ...baseStyles.bubble, ...theme.botBubble }}>
-                    {c.bot === "loading" ? <Typing darkMode={darkMode} /> : (
-                      <ReactMarkdown
-                        components={{
-                          code({ node, inline, className, children, ...props }) {
-                            const match = /language-(\w+)/.exec(className || "");
-                            const codeStr = String(children).replace(/\n$/, "");
-                            if (!inline && match) {
-                              return (
-                                <div style={{ position: "relative" }}>
-                                  <button
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(codeStr);
-                                      const btn = document.getElementById("cbtn-" + i + "-" + match[1]);
-                                      if (btn) { btn.textContent = "Copied!"; setTimeout(() => { btn.textContent = "Copy"; }, 2000); }
-                                    }}
-                                    id={"cbtn-" + i + "-" + match[1]}
-                                    style={{
-                                      position: "absolute", top: "8px", right: "8px", zIndex: 1,
-                                      background: "#334155", color: "#cbd5e1", border: "none",
-                                      borderRadius: "5px", padding: "3px 9px", fontSize: "11px", cursor: "pointer",
-                                    }}
-                                  >Copy</button>
-                                  <SyntaxHighlighter
-                                    style={darkMode ? oneDark : oneLight}
-                                    language={match[1]}
-                                    PreTag="div"
-                                    customStyle={{ borderRadius: "8px", fontSize: "13px", margin: "8px 0", paddingTop: "32px" }}
-                                    {...props}
-                                  >{codeStr}</SyntaxHighlighter>
-                                </div>
-                              );
-                            }
+
+                {/* BOT MESSAGE */}
+                <div style={{ display: "flex", justifyContent: "flex-start", alignItems: "flex-end", gap: "8px" }}>
+                  <div style={{
+                    width: "30px", height: "30px", borderRadius: "50%", flexShrink: 0,
+                    background: "linear-gradient(135deg,#10b981,#059669)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "14px"
+                  }}>🤖</div>
+                  <div style={{
+                    maxWidth: "80%", padding: "14px 16px",
+                    background: d ? "#1e293b" : "#f8fafc",
+                    borderRadius: "4px 18px 18px 18px",
+                    fontSize: "14px", lineHeight: "1.7",
+                    border: `1px solid ${d ? "#334155" : "#e2e8f0"}`,
+                    color: d ? "#e2e8f0" : "#1e293b"
+                  }}>
+                    {c.bot === "loading" ? <Typing /> : (
+                      <ReactMarkdown components={{
+                        code({ node, inline, className, children, ...props }) {
+                          const match = /language-(\w+)/.exec(className || "");
+                          const codeStr = String(children).replace(/\n$/, "");
+                          const codeId = `code-${i}-${match?.[1]}`;
+                          if (!inline && match) {
                             return (
-                              <code style={{ background: darkMode ? "#0f172a" : "#e2e8f0", color: darkMode ? "#7dd3fc" : "#0369a1", padding: "1px 5px", borderRadius: "4px", fontFamily: "monospace", fontSize: "13px" }} {...props}>
-                                {children}
-                              </code>
+                              <div style={{ position: "relative", margin: "10px 0" }}>
+                                <div style={{
+                                  position: "absolute", top: "10px", right: "10px", zIndex: 1,
+                                  display: "flex", alignItems: "center", gap: "8px"
+                                }}>
+                                  <span style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>{match[1]}</span>
+                                  <button onClick={() => copyCode(codeStr, codeId)} style={{
+                                    background: copiedId === codeId ? "#22c55e" : "#334155",
+                                    color: "white", border: "none", borderRadius: "6px",
+                                    padding: "3px 10px", fontSize: "11px", cursor: "pointer",
+                                    transition: "background 0.2s"
+                                  }}>{copiedId === codeId ? "✓ Copied" : "Copy"}</button>
+                                </div>
+                                <SyntaxHighlighter
+                                  style={d ? oneDark : oneLight}
+                                  language={match[1]}
+                                  PreTag="div"
+                                  customStyle={{ borderRadius: "10px", fontSize: "13px", margin: 0, paddingTop: "36px" }}
+                                  {...props}
+                                >{codeStr}</SyntaxHighlighter>
+                              </div>
                             );
-                          },
-                          p: ({ children }) => <p style={{ margin: "4px 0", lineHeight: "1.65" }}>{children}</p>,
-                        }}
-                      >{c.bot}</ReactMarkdown>
+                          }
+                          return (
+                            <code style={{
+                              background: d ? "#0f172a" : "#e2e8f0",
+                              color: d ? "#7dd3fc" : "#0369a1",
+                              padding: "2px 6px", borderRadius: "5px",
+                              fontFamily: "monospace", fontSize: "13px"
+                            }} {...props}>{children}</code>
+                          );
+                        },
+                        p: ({ children }) => <p style={{ margin: "6px 0" }}>{children}</p>,
+                        h1: ({ children }) => <h1 style={{ fontSize: "17px", margin: "10px 0 6px", fontWeight: 700 }}>{children}</h1>,
+                        h2: ({ children }) => <h2 style={{ fontSize: "15px", margin: "10px 0 6px", fontWeight: 600 }}>{children}</h2>,
+                        h3: ({ children }) => <h3 style={{ fontSize: "14px", margin: "8px 0 4px", fontWeight: 600 }}>{children}</h3>,
+                        ul: ({ children }) => <ul style={{ margin: "6px 0", paddingLeft: "20px" }}>{children}</ul>,
+                        ol: ({ children }) => <ol style={{ margin: "6px 0", paddingLeft: "20px" }}>{children}</ol>,
+                        li: ({ children }) => <li style={{ margin: "3px 0" }}>{children}</li>,
+                        strong: ({ children }) => <strong style={{ color: d ? "#a5b4fc" : "#6366f1" }}>{children}</strong>,
+                        blockquote: ({ children }) => (
+                          <blockquote style={{
+                            borderLeft: "3px solid #6366f1", margin: "8px 0",
+                            paddingLeft: "12px", color: d ? "#94a3b8" : "#64748b",
+                            fontStyle: "italic"
+                          }}>{children}</blockquote>
+                        ),
+                      }}>{c.bot}</ReactMarkdown>
                     )}
                   </div>
                 </div>
+
               </div>
             ))}
             <div ref={chatEndRef} />
           </div>
 
           {/* FOOTER */}
-          <div style={theme.footer}>
-            <textarea
-              value={msg}
-              onChange={e => setMsg(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask about code... (Enter to send)"
-              rows={1}
-              style={theme.input}
-            />
-            <button
-              style={{ ...theme.sendBtn, opacity: loading || !msg.trim() ? 0.5 : 1, cursor: loading || !msg.trim() ? "not-allowed" : "pointer" }}
-              onClick={sendMessage}
-              disabled={loading || !msg.trim()}
-            >{loading ? "..." : "Send"}</button>
+          <div style={{
+            padding: "14px 20px 20px",
+            background: d ? "#0f172a" : "white",
+            borderTop: `1px solid ${d ? "#1e293b" : "#f1f5f9"}`,
+          }}>
+            <div style={{
+              display: "flex", gap: "10px", alignItems: "flex-end",
+              background: d ? "#1e293b" : "#f8fafc",
+              border: `1px solid ${loading ? "#6366f1" : (d ? "#334155" : "#e2e8f0")}`,
+              borderRadius: "14px", padding: "8px 8px 8px 16px",
+              transition: "border-color 0.2s",
+              boxShadow: loading ? "0 0 0 3px rgba(99,102,241,0.15)" : "none"
+            }}>
+              <textarea
+                ref={textareaRef}
+                value={msg}
+                onChange={handleInput}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask about code, errors, DSA... (Enter to send)"
+                rows={1}
+                style={{
+                  flex: 1, background: "transparent", border: "none", outline: "none",
+                  color: d ? "#e2e8f0" : "#1e293b", fontSize: "14px",
+                  resize: "none", lineHeight: "1.5", minHeight: "44px", maxHeight: "140px",
+                  fontFamily: "inherit", paddingTop: "10px"
+                }}
+              />
+              <button
+                onClick={sendMessage}
+                disabled={loading || !msg.trim()}
+                style={{
+                  width: "40px", height: "40px", borderRadius: "10px", border: "none",
+                  background: loading || !msg.trim()
+                    ? (d ? "#1e293b" : "#e2e8f0")
+                    : "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                  color: loading || !msg.trim() ? (d ? "#334155" : "#94a3b8") : "white",
+                  cursor: loading || !msg.trim() ? "not-allowed" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "18px", flexShrink: 0,
+                  transition: "all 0.2s",
+                  boxShadow: loading || !msg.trim() ? "none" : "0 2px 10px rgba(99,102,241,0.4)"
+                }}
+              >{loading ? "⏳" : "➤"}</button>
+            </div>
+            <div style={{ textAlign: "center", fontSize: "11px", color: d ? "#334155" : "#cbd5e1", marginTop: "8px" }}>
+              Shift+Enter for new line · Enter to send
+            </div>
           </div>
 
         </div>
@@ -526,69 +650,33 @@ export default function Chat() {
   );
 }
 
-function Typing({ darkMode }) {
+function btnStyle(dark) {
+  return {
+    background: "transparent",
+    border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`,
+    color: dark ? "#94a3b8" : "#64748b",
+    borderRadius: "8px", padding: "5px 12px",
+    cursor: "pointer", fontSize: "12px", fontWeight: 500,
+    transition: "all 0.2s"
+  };
+}
+
+function Typing() {
   return (
-    <div style={{ display: "flex", gap: "5px", alignItems: "center", padding: "2px 0" }}>
+    <div style={{ display: "flex", gap: "5px", alignItems: "center", padding: "4px 0" }}>
       <style>{`
-        @keyframes mentorBlink {
-          0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
-          40% { opacity: 1; transform: scale(1.2); }
+        @keyframes typingBounce {
+          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+          30% { transform: translateY(-6px); opacity: 1; }
         }
       `}</style>
       {[0, 1, 2].map(i => (
         <span key={i} style={{
           width: "7px", height: "7px", borderRadius: "50%",
-          background: darkMode ? "#94a3b8" : "#64748b",
-          display: "inline-block",
-          animation: `mentorBlink 1.4s infinite ${i * 0.2}s`,
+          background: "#6366f1", display: "inline-block",
+          animation: `typingBounce 1.2s infinite ${i * 0.2}s`
         }} />
       ))}
     </div>
   );
 }
-
-const baseStyles = {
-  app: { display: "flex", height: "100vh", transition: "background 0.3s" },
-  main: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "12px" },
-  tabsScroll: { display: "flex", gap: "6px", overflowX: "auto", padding: "0 4px", alignItems: "center" },
-  row: { display: "flex", alignItems: "flex-end", gap: "8px" },
-  bubble: { maxWidth: "65%", padding: "10px 14px", borderRadius: "14px", fontSize: "14px", lineHeight: "1.6" },
-  avatar: { width: "28px", height: "28px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 600, flexShrink: 0 },
-  headerActions: { display: "flex", alignItems: "center", gap: "8px" },
-  statusDot: { color: "#22c55e", fontSize: "13px" },
-};
-
-const darkStyles = {
-  tabsBar: { width: "70%", marginBottom: "6px" },
-  tab: { display: "flex", alignItems: "center", gap: "6px", padding: "6px 14px", borderRadius: "8px", cursor: "pointer", background: "#0f172a", border: "1px solid #1e293b", color: "#64748b", whiteSpace: "nowrap" },
-  activeTab: { background: "#1e293b", color: "white", borderColor: "#334155" },
-  closeTab: { background: "transparent", border: "none", color: "#64748b", cursor: "pointer", fontSize: "16px", lineHeight: 1, padding: "0 2px" },
-  newTabBtn: { background: "transparent", border: "1px dashed #334155", color: "#64748b", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontSize: "13px", whiteSpace: "nowrap" },
-  container: { width: "70%", height: "83vh", background: "linear-gradient(135deg, #0f172a, #020617)", borderRadius: "16px", display: "flex", flexDirection: "column", boxShadow: "0 0 40px rgba(0,0,0,0.6)" },
-  header: { padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #1e293b" },
-  actionBtn: { background: "transparent", border: "1px solid #334155", color: "#94a3b8", borderRadius: "6px", padding: "4px 10px", cursor: "pointer", fontSize: "12px" },
-  body: { flex: 1, padding: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "14px" },
-  userBubble: { background: "linear-gradient(135deg, #2563eb, #1d4ed8)", color: "white" },
-  botBubble: { background: "#1e293b", color: "white" },
-  footer: { display: "flex", gap: "10px", padding: "14px 18px", borderTop: "1px solid #1e293b" },
-  input: { flex: 1, padding: "10px 14px", borderRadius: "8px", background: "#020617", color: "white", border: "1px solid #334155", outline: "none", resize: "none", fontSize: "14px" },
-  sendBtn: { background: "linear-gradient(135deg, #22c55e, #16a34a)", border: "none", padding: "8px 20px", borderRadius: "8px", color: "white", fontWeight: 500 },
-};
-
-const lightStyles = {
-  tabsBar: { width: "70%", marginBottom: "6px" },
-  tab: { display: "flex", alignItems: "center", gap: "6px", padding: "6px 14px", borderRadius: "8px", cursor: "pointer", background: "#e2e8f0", border: "1px solid #cbd5e1", color: "#64748b", whiteSpace: "nowrap" },
-  activeTab: { background: "white", color: "#0f172a", borderColor: "#94a3b8" },
-  closeTab: { background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "16px", lineHeight: 1, padding: "0 2px" },
-  newTabBtn: { background: "transparent", border: "1px dashed #94a3b8", color: "#64748b", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontSize: "13px", whiteSpace: "nowrap" },
-  container: { width: "70%", height: "83vh", background: "white", borderRadius: "16px", display: "flex", flexDirection: "column", boxShadow: "0 4px 24px rgba(0,0,0,0.1)", border: "1px solid #e2e8f0" },
-  header: { padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #e2e8f0" },
-  actionBtn: { background: "transparent", border: "1px solid #cbd5e1", color: "#475569", borderRadius: "6px", padding: "4px 10px", cursor: "pointer", fontSize: "12px" },
-  body: { flex: 1, padding: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "14px" },
-  userBubble: { background: "linear-gradient(135deg, #2563eb, #1d4ed8)", color: "white" },
-  botBubble: { background: "#f1f5f9", color: "#0f172a" },
-  footer: { display: "flex", gap: "10px", padding: "14px 18px", borderTop: "1px solid #e2e8f0" },
-  input: { flex: 1, padding: "10px 14px", borderRadius: "8px", background: "#f8fafc", color: "#0f172a", border: "1px solid #cbd5e1", outline: "none", resize: "none", fontSize: "14px" },
-  sendBtn: { background: "linear-gradient(135deg, #22c55e, #16a34a)", border: "none", padding: "8px 20px", borderRadius: "8px", color: "white", fontWeight: 500 },
-  
-};
