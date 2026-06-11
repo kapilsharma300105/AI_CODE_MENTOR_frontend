@@ -348,6 +348,7 @@
 
 
 
+import API from "../api";
 
 import React, { useState, useRef, useEffect } from "react";
 import CodeEditor from "./CodeEditor";
@@ -420,12 +421,8 @@ export default function RunCode() {
     pushLine(`▶ Executing ${activeFile}...`, "info");
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/run/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: files[activeFile], language: lang }),
-      });
-      const data = await res.json();
+     const res = await API.post("run/", { code: files[activeFile], language: lang });
+const data = res.data;
       const lines = (data.output || "").split("\n");
       lines.forEach(l => pushLine(l, "out"));
       pushLine("✔ Process exited with code 0", "success");
