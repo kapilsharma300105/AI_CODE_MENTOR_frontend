@@ -16,17 +16,12 @@ function ForgotPassword() {
     try {
       setLoading(true);
 
-      const res = await axios.post(
-        "http://127.0.0.1:8000/api/auth/password/reset/",
-        {
-          email: email.trim(),
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const API_URL =
+  "https://ai-code-mentor-backend-0rmn.onrender.com/api/auth/password/reset/";
+
+const res = await axios.post(API_URL, {
+  email: email.trim(),
+});
 
       alert("Reset link sent successfully ✔ Check your email");
       setEmail("");
