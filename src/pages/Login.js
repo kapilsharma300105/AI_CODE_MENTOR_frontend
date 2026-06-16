@@ -159,7 +159,13 @@ function Login() {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
+  setError("");
+  if (!form.username || !form.password) {
+    setError("Username and password required");
+    return;
+  }
   try {
+    setLoading(true);
     const res = await API.post("token/", {
       username: form.username,
       password: form.password,
@@ -169,9 +175,10 @@ function Login() {
     localStorage.setItem("refresh", res.data.refresh);
 
     navigate("/dashboard");
-
   } catch (err) {
-    setError("Login failed");
+    setError(err.response?.data?.detail || "Login failed");
+  } finally {
+    setLoading(false);
   }
 };
 
