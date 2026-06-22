@@ -57,9 +57,7 @@ export default function Profile() {
       fd.append("bio", form.bio);
       if (form.avatar) fd.append("avatar", form.avatar);
 
-     const res = await API.post("profile/update/", fd, {
-  headers: { "Content-Type": undefined },
-});
+  const res = await API.post("profile/update/", fd);
 
       // Keep old avatar if API returns null (no new photo uploaded)
       const fullAvatar = buildAvatarUrl(res.data.avatar) || user?.avatar || null;
